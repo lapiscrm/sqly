@@ -29,28 +29,31 @@ func CreateSqliteDBFile(dbfile string, deleteIfExists bool) (*sql.DB, error) {
 	return sql.Open("sqlite3", dbfile)
 }
 
-func doSetupDB(t *testing.T, dbfile string, username string, password string) *sql.DB {
+func doSetupDB(dbfile string, username string, password string) (*sql.DB, error) {
 	db, err := CreateSqliteDBFile(dbfile, true)
-	require.Nil(t, err)
-	require.NotNil(t, db)
-
+	if err != nil {
+		return nil, err
+	}
 	err = sqly.ExecuteQueryFromFile(db, "user.sql")
-	require.Nil(t, err)
-
+	if err != nil {
+		return nil, err
+	}
 	_, err = db.Exec(`INSERT INTO users(username, pwhash) VALUES(? , ?) `, username, password)
-	require.Nil(t, err)
-
-	return db
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
 }
 
-func TestSelectRow(t *testing.T) {
+func TestSelectRowLegacy(t *testing.T) {
 	username := "user1"
 	password := "password"
 
-	db := doSetupDB(t, "selectrow.db", username, password)
+	db, err := doSetupDB("selectrow.db", username, password)
+	require.Nil(t, err)
 
 	var storedPassword string
-	err := sqly.SelectRow(db,
+	err = sqly.SelectRowLegacy(db,
 		func(row *sql.Row) error {
 			return row.Scan(&storedPassword)
 		},
@@ -62,14 +65,15 @@ func TestSelectRow(t *testing.T) {
 	assert.Equal(t, password, storedPassword)
 }
 
-func TestSelectRow2(t *testing.T) {
+func TestSelectRow(t *testing.T) {
 	username := "user1"
 	password := "password"
 
-	db := doSetupDB(t, "selectrow2.db", username, password)
+	db, err := doSetupDB("selectrow2.db", username, password)
+	require.Nil(t, err)
 
 	var storedPassword string
-	err := sqly.SelectRow2(db,
+	err = sqly.SelectRow(db,
 		func(row *sql.Row) error {
 			return row.Scan(&storedPassword)
 		},
@@ -77,7 +81,6 @@ func TestSelectRow2(t *testing.T) {
 		username,
 	)
 	require.Nil(t, err)
-
 	assert.Equal(t, password, storedPassword)
 }
 
@@ -85,9 +88,11 @@ func TestSelect(t *testing.T) {
 	username := "user1"
 	password := "password"
 
-	db := doSetupDB(t, "select.db", username, password)
+	db, err := doSetupDB("select.db", username, password)
+	require.Nil(t, err)
+
 	username2 := "user2"
-	_, err := db.Exec(`INSERT INTO users(username, pwhash) VALUES(? , ?) `, username2, password)
+	_, err = db.Exec(`INSERT INTO users(username, pwhash) VALUES(? , ?) `, username2, password)
 	require.Nil(t, err)
 
 	users := []string{}
@@ -105,4 +110,44 @@ func TestSelect(t *testing.T) {
 	)
 	require.Nil(t, err)
 	assert.Equal(t, len(users), 2)
+}
+
+func BenchmarkSelectRowLegacy(b *testing.B) {
+	username := "user1"
+	password := "password"
+
+	db, err := doSetupDB("selectrow.db", username, password)
+	if err != nil {
+		return
+	}
+	for n := 0; n < b.N; n++ {
+		var storedPassword string
+		err = sqly.SelectRowLegacy(db,
+			func(row *sql.Row) error {
+				return row.Scan(&storedPassword)
+			},
+			`SELECT pwhash from users where username = ?`,
+			username,
+		)
+	}
+}
+
+func BenchmarkSelectRow(b *testing.B) {
+	username := "user1"
+	password := "password"
+
+	db, err := doSetupDB("selectrow.db", username, password)
+	if err != nil {
+		return
+	}
+	for n := 0; n < b.N; n++ {
+		var storedPassword string
+		err = sqly.SelectRow(db,
+			func(row *sql.Row) error {
+				return row.Scan(&storedPassword)
+			},
+			`SELECT pwhash from users where username = ?`,
+			username,
+		)
+	}
 }
