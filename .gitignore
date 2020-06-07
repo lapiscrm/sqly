@@ -16,4 +16,5 @@ vendor/
 
 # Generated sqlite3 db files of test runs
 *.db
+*.db-journal
 
