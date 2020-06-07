@@ -2,7 +2,7 @@ package sqlite3impl
 
 import (
 	"database/sql"
-	"os" 
+	"os"
 
 	"github.com/lapiscrm/sqly"
 
@@ -29,13 +29,10 @@ func CreateSqliteDBFile(dbfile string, deleteIfExists bool, queryFiles []string)
 	}
 	if queryFiles == nil {
 		return DB, nil
-
 	}
-	for _, queryFile := range queryFiles {
-		err := sqly.ExecuteQueryFromFile(DB, queryFile)
-		if err != nil {
-			return nil, err
-		}
+	err = sqly.ExecuteQueryFromFiles(DB, queryFiles)
+	if err != nil {
+		return nil, err
 	}
 	return DB, nil
 }
