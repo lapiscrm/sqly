@@ -3,6 +3,7 @@ package sqly_test
 import (
 	"database/sql"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/lapiscrm/sqly"
@@ -112,14 +113,32 @@ func TestSelect(t *testing.T) {
 	assert.Equal(t, len(users), 2)
 }
 
-func BenchmarkSelectRowLegacy(b *testing.B) {
+func doSetupForBenchmark(dbfile string, count int) (*sql.DB, error) {
 	username := "user1"
 	password := "password"
 
-	db, err := doSetupDB("selectrow.db", username, password)
+	db, err := doSetupDB(dbfile, username, password)
+	if err != nil {
+		return nil, err
+	}
+	for i := 0; i < count; i++ {
+		_, err = db.Exec(`INSERT INTO users(username, pwhash) VALUES(? , ?) `, username+strconv.Itoa(i), password)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return db, nil
+}
+
+func BenchmarkSelectRowLegacy(b *testing.B) {
+	b.StopTimer()
+	username := "user1"
+	db, err := doSetupForBenchmark("selectrowlegacy.db", 10)
 	if err != nil {
 		return
 	}
+	b.StartTimer()
 	for n := 0; n < b.N; n++ {
 		var storedPassword string
 		err = sqly.SelectRowLegacy(db,
@@ -133,13 +152,13 @@ func BenchmarkSelectRowLegacy(b *testing.B) {
 }
 
 func BenchmarkSelectRow(b *testing.B) {
+	b.StopTimer()
 	username := "user1"
-	password := "password"
-
-	db, err := doSetupDB("selectrow.db", username, password)
+	db, err := doSetupForBenchmark("selectrow.db", 10)
 	if err != nil {
 		return
 	}
+	b.StartTimer()
 	for n := 0; n < b.N; n++ {
 		var storedPassword string
 		err = sqly.SelectRow(db,

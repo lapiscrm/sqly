@@ -21,8 +21,7 @@ func SelectRowLegacy(DB *sql.DB, onRow onRowFunc, query string, args ...interfac
 }
 
 func SelectRow(DB *sql.DB, onRow onRowFunc, query string, args ...interface{}) error {
-	row := DB.QueryRow(query, args...)
-	return onRow(row)
+	return onRow(DB.QueryRow(query, args...))
 }
 
 func Select(DB *sql.DB, onRows onRowsFunc, query string, args ...interface{}) error {
