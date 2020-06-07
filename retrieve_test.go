@@ -2,16 +2,35 @@ package sqly_test
 
 import (
 	"database/sql"
+	"os"
 	"testing"
 
 	"github.com/lapiscrm/sqly"
-	"github.com/lapiscrm/sqly/drivers/sqlite3impl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	// Import sqlite3 driver here
+	_ "github.com/mattn/go-sqlite3"
 )
 
+func CreateSqliteDBFile(dbfile string, deleteIfExists bool) (*sql.DB, error) {
+	if deleteIfExists {
+		if _, err := os.Stat(dbfile); err == nil {
+			err := os.Remove(dbfile)
+			if err != nil {
+				return nil, err
+			}
+		} else if os.IsNotExist(err) {
+			// No such file
+		} else {
+			return nil, err
+		}
+	}
+	return sql.Open("sqlite3", dbfile)
+}
+
 func doSetupDB(t *testing.T, dbfile string, username string, password string) *sql.DB {
-	db, err := sqlite3impl.CreateSqliteDBFile(dbfile, true, nil)
+	db, err := CreateSqliteDBFile(dbfile, true)
 	require.Nil(t, err)
 	require.NotNil(t, db)
 
