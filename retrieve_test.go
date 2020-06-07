@@ -80,3 +80,29 @@ func TestSelectRow2(t *testing.T) {
 
 	assert.Equal(t, password, storedPassword)
 }
+
+func TestSelect(t *testing.T) {
+	username := "user1"
+	password := "password"
+
+	db := doSetupDB(t, "selectrow2.db", username, password)
+	username2 := "user2"
+	_, err := db.Exec(`INSERT INTO users(username, pwhash) VALUES(? , ?) `, username2, password)
+	require.Nil(t, err)
+
+	users := []string{}
+	err = sqly.Select(db,
+		func(rows *sql.Rows) error {
+			var storedUsername string
+			err := rows.Scan(&storedUsername)
+			if err != nil {
+				return err
+			}
+			users = append(users, storedUsername)
+			return nil
+		},
+		`SELECT username from users`,
+	)
+	require.Nil(t, err)
+	assert.Equal(t, len(users), 2)
+}
