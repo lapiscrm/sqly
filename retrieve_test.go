@@ -85,7 +85,7 @@ func TestSelect(t *testing.T) {
 	username := "user1"
 	password := "password"
 
-	db := doSetupDB(t, "selectrow2.db", username, password)
+	db := doSetupDB(t, "select.db", username, password)
 	username2 := "user2"
 	_, err := db.Exec(`INSERT INTO users(username, pwhash) VALUES(? , ?) `, username2, password)
 	require.Nil(t, err)
