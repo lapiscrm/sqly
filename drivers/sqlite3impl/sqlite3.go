@@ -1,8 +1,8 @@
-package dbtest
+package sqlite3impl
 
 import (
 	"database/sql"
-	"os"
+	"os" 
 
 	"github.com/lapiscrm/sqly"
 
